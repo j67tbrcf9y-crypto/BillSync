@@ -1,0 +1,17 @@
+{
+  "name": "BillSync",
+  "short_name": "BillSync",
+  "description": "Track money in and money out for your responsibilities.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EDEFEA",
+  "theme_color": "#EDEFEA",
+  "icons": [
+    { "src": "IMG_3235.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "IMG_3235.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "IMG_3236.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "IMG_3236.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
