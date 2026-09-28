@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>BillSync V2</title>
+</head>
+<body>
+<div id="root" style="font-family:-apple-system,sans-serif;padding:24px">Loading BillSync V2…</div>
+<script>
+(async () => {
+  try {
+    const response = await fetch('./index.html', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Unable to load BillSync (${response.status})`);
+    let html = await response.text();
+
+    // The current app defines a localStorage-backed window.storage inline.
+    // Remove only that compatibility adapter; the rest of the application is unchanged.
+    const storageStart = '  (function() {\n    const PREFIX = "billsync:";';
+    const start = html.indexOf(storageStart);
+    if (start < 0) throw new Error('Could not locate the legacy storage adapter.');
+    const endMarker = '  })();\n  function Icon';
+    const end = html.indexOf(endMarker, start);
+    if (end < 0) throw new Error('Could not locate the end of the legacy storage adapter.');
+
+    html = html.slice(0, start) + '  function Icon' + html.slice(end + endMarker.length);
+
+    // Load IndexedDB first, then wrap it with automatic month rollover before
+    // the React application reads ledger-data-v1.
+    const reactMarker = '<script src="https://unpkg.com/react@18/umd/react.production.min.js"></' + 'script>';
+    const injection = reactMarker + '\n<script src="./indexeddb-storage.js"></' + 'script>\n<script src="./auto-history.js"></' + 'script>';
+    if (!html.includes(reactMarker)) throw new Error('Could not locate the React loader.');
+    html = html.replace(reactMarker, injection);
+
+    // Avoid recursively loading this bootstrap page if markup changes later.
+    document.open();
+    document.write(html);
+    document.close();
+  } catch (error) {
+    document.getElementById('root').innerHTML = '<strong>BillSync V2 could not start.</strong><pre style="white-space:pre-wrap">' +
+      String(error && (error.stack || error.message) || error).replace(/</g, '&lt;') + '</pre>';
+  }
+})();
+</script>
+</body>
+</html>
