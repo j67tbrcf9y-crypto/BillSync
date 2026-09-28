@@ -19,7 +19,8 @@
 <script>
 (async () => {
   try {
-    const response = await fetch('./app-shell.html?v=cleanup-1', { cache: 'no-store' });
+    const version = '20260928-statistics1';
+    const response = await fetch(`./app-shell.html?v=${version}`, { cache: 'no-store' });
     if (!response.ok) throw new Error(`Unable to load BillSync (${response.status})`);
     let html = await response.text();
 
@@ -33,11 +34,11 @@
 
     const reactMarker = '<script src="https://unpkg.com/react@18/umd/react.production.min.js"></' + 'script>';
     const injection = reactMarker +
-      '\n<script src="./indexeddb-storage.js?v=cleanup-1"></' + 'script>' +
-      '\n<script src="./auto-history.js?v=cleanup-1"></' + 'script>' +
-      '\n<script src="./ui-redesign.js?v=cleanup-1"></' + 'script>' +
-      '\n<script src="./ui-consolidate.js?v=cleanup-1"></' + 'script>' +
-      '\n<script src="./ui-statistics.js?v=cleanup-1"></' + 'script>';
+      `\n<script src="./indexeddb-storage.js?v=${version}"></` + 'script>' +
+      `\n<script src="./auto-history.js?v=${version}"></` + 'script>' +
+      `\n<script src="./ui-redesign.js?v=${version}"></` + 'script>' +
+      `\n<script src="./ui-consolidate.js?v=${version}"></` + 'script>' +
+      `\n<script src="./ui-statistics.js?v=${version}"></` + 'script>';
     if (!html.includes(reactMarker)) throw new Error('Could not locate the React loader.');
     html = html.replace(reactMarker, injection);
 
