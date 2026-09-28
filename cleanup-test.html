@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#EDEFEA" />
+<title>BillSync Cleanup Test</title>
+</head>
+<body>
+<div id="root" style="font-family:-apple-system,sans-serif;padding:24px">Loading BillSync cleanup test…</div>
+<script>
+(async () => {
+  const RAW = 'https://raw.githubusercontent.com/j67tbrcf9y-crypto/BillSync/billsync-cleanup-test/';
+  const TEST_VERSION = '20260927-cleanup1';
+  const fetchText = async (path) => {
+    const response = await fetch(`${RAW}${path}?v=${TEST_VERSION}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Unable to load ${path} (${response.status})`);
+    return response.text();
+  };
+  const safeInline = (source) => source.replace(/<\/script/gi, '<\\/script');
+
+  try {
+    const [appShell, storage, history, redesign, consolidate, statistics] = await Promise.all([
+      fetchText('app-shell.html'),
+      fetchText('indexeddb-storage.js'),
+      fetchText('auto-history.js'),
+      fetchText('ui-redesign.js'),
+      fetchText('ui-consolidate.js'),
+      fetchText('ui-statistics.js')
+    ]);
+
+    let html = appShell;
+    const storageStart = '  (function() {\n    const PREFIX = "billsync:";';
+    const start = html.indexOf(storageStart);
+    if (start < 0) throw new Error('Could not locate the legacy storage adapter.');
+    const endMarker = '  })();\n  function Icon';
+    const end = html.indexOf(endMarker, start);
+    if (end < 0) throw new Error('Could not locate the end of the legacy storage adapter.');
+    html = html.slice(0, start) + '  function Icon' + html.slice(end + endMarker.length);
+
+    const reactMarker = '<script src="https://unpkg.com/react@18/umd/react.production.min.js"></' + 'script>';
+    if (!html.includes(reactMarker)) throw new Error('Could not locate the React loader.');
+
+    const injection = reactMarker
+      + `\n<script>${safeInline(storage)}<\/script>`
+      + `\n<script>${safeInline(history)}<\/script>`
+      + `\n<script>${safeInline(redesign)}<\/script>`
+      + `\n<script>${safeInline(consolidate)}<\/script>`
+      + `\n<script>${safeInline(statistics)}<\/script>`;
+    html = html.replace(reactMarker, injection);
+
+    const removeManualMonthControl = `\n<script>\n(() => {\n  function removeNewMonthButtons() {\n    document.querySelectorAll('button').forEach((button) => {\n      const text = (button.textContent || '').trim().toLowerCase();\n      const title = (button.getAttribute('title') || '').trim().toLowerCase();\n      if (text === 'new month' || title === 'start a new month') button.remove();\n    });\n  }\n  removeNewMonthButtons();\n  const root = document.getElementById('root');\n  if (root) new MutationObserver(removeNewMonthButtons).observe(root, { childList: true, subtree: true });\n})();\n<\/script>\n`;
+    html = html.replace('</body>', removeManualMonthControl + '</body>');
+
+    document.open();
+    document.write(html);
+    document.close();
+  } catch (error) {
+    document.getElementById('root').innerHTML = '<strong>BillSync cleanup test could not start.</strong><pre style="white-space:pre-wrap">' +
+      String(error && (error.stack || error.message) || error).replace(/</g, '&lt;') + '</pre>';
+  }
+})();
+</script>
+</body>
+</html>
