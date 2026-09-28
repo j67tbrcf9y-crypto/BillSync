@@ -6,35 +6,40 @@
   const monthlyIncome = (i) => { const v=Number(i?.amount)||0; if(i?.frequency==="weekly") return v*52/12; if(i?.frequency==="biweekly") return v*26/12; if(i?.frequency==="yearly") return v/12; return v; };
 
   function getShell(){ return document.querySelector("#root .bs-shell"); }
-  function getNav(){
+  function getFixedNav(){
     const shell=getShell(); if(!shell) return null;
-    return Array.from(shell.querySelectorAll("div")).find(el=>{
+    return Array.from(shell.children).find(el=>{
       const s=el.getAttribute("style")||"";
-      return s.includes("position: fixed") && s.includes("bottom: 0") && el.querySelectorAll(":scope > button").length>=4;
+      return s.includes("position: fixed") && s.includes("bottom: 0") && el.querySelectorAll("button").length>=4;
     }) || null;
+  }
+  function getNav(){
+    const fixed=getFixedNav(); if(!fixed) return null;
+    return Array.from(fixed.children).find(el=>el.querySelectorAll(":scope > button").length>=4) || fixed;
   }
   function getContent(){
     const shell=getShell(); if(!shell) return null;
     return Array.from(shell.children).find(el=>{
       const s=el.getAttribute("style")||"";
-      return s.includes("96px") && s.includes("16px") && el !== getNav();
+      return s.includes("padding: 0px 16px 96px") || (s.includes("96px") && s.includes("16px") && !s.includes("position: fixed"));
     }) || null;
   }
 
-  function icon(){ return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3"/></svg>`; }
+  function icon(){ return `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3"/></svg>`; }
 
   function ensureTab(){
     const nav=getNav(); if(!nav || document.getElementById("bs-stats-tab")) return;
     const btn=document.createElement("button");
     btn.id="bs-stats-tab";
     btn.type="button";
-    btn.innerHTML=`${icon()}<span style="font-size:10px">Statistics</span>`;
-    btn.style.cssText="flex:1;background:none;border:none;color:var(--ink-soft);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;border-radius:13px;";
-    btn.addEventListener("click",()=>showStats());
+    btn.innerHTML=`${icon()}<span style="font-size:10.5px;font-weight:500;letter-spacing:.2px">Statistics</span>`;
+    btn.style.cssText="flex:1;background:none;border:none;padding:12px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--muted);min-width:0;";
+    btn.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); showStats(); });
     nav.appendChild(btn);
 
     Array.from(nav.children).forEach(other=>{
-      if(other===btn) return;
+      if(other===btn || other.dataset.bsStatsBound) return;
+      other.dataset.bsStatsBound="1";
       other.addEventListener("click",()=>hideStats(),true);
     });
   }
@@ -42,12 +47,14 @@
   function ensurePanel(){
     let panel=document.getElementById("bs-statistics-panel");
     if(panel) return panel;
-    const shell=getShell(), nav=getNav(); if(!shell||!nav) return null;
+    const shell=getShell(); if(!shell) return null;
     panel=document.createElement("section");
     panel.id="bs-statistics-panel";
     panel.style.cssText="display:none;padding:18px 16px 100px;max-width:480px;margin:0 auto;color:var(--ink);";
     panel.innerHTML=`<div style="font-family:'Fraunces',serif;font-size:23px;font-weight:600;margin-bottom:4px">Statistics</div><div style="font-size:12px;color:var(--ink-soft);margin-bottom:18px">How monthly income is being used</div><div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 3px 14px rgba(31,41,51,.055)"><div id="bs-stats-totals" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px"></div><div id="bs-pie" style="display:flex;justify-content:center;margin:8px 0 20px"></div><div id="bs-legend" style="display:flex;flex-direction:column;gap:10px"></div></div>`;
-    shell.insertBefore(panel,nav);
+    const fixed=getFixedNav();
+    if(fixed && fixed.parentElement===shell) shell.insertBefore(panel,fixed);
+    else shell.appendChild(panel);
     return panel;
   }
 
@@ -76,7 +83,8 @@
     if(content) content.style.display="none";
     const overview=document.getElementById("bs-ui-overview"); if(overview) overview.style.display="none";
     panel.style.display="block";
-    const btn=document.getElementById("bs-stats-tab"); if(btn){ btn.style.color="var(--accent)"; btn.style.background="color-mix(in srgb,var(--accent) 8%,transparent)"; }
+    const nav=getNav(); if(nav) Array.from(nav.children).forEach(b=>b.style.color="var(--muted)");
+    const btn=document.getElementById("bs-stats-tab"); if(btn){ btn.style.color="var(--accent)"; const label=btn.querySelector("span"); if(label) label.style.fontWeight="600"; }
     render();
   }
   function hideStats(){
@@ -84,7 +92,7 @@
     if(panel) panel.style.display="none";
     if(content) content.style.display="block";
     const overview=document.getElementById("bs-ui-overview"); if(overview) overview.style.display="block";
-    const btn=document.getElementById("bs-stats-tab"); if(btn){ btn.style.color="var(--ink-soft)"; btn.style.background="none"; }
+    const btn=document.getElementById("bs-stats-tab"); if(btn){ btn.style.color="var(--muted)"; const label=btn.querySelector("span"); if(label) label.style.fontWeight="500"; }
   }
 
   let q=false; const refresh=()=>{ if(q)return; q=true; requestAnimationFrame(()=>{q=false; ensureTab(); ensurePanel();}); };
