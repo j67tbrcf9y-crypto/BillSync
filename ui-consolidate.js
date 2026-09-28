@@ -2,13 +2,11 @@
 (() => {
   "use strict";
 
-  function moveHeaderAboveOverview() {
+  function placeOverviewBelowHeader() {
     const overview = document.getElementById("bs-ui-overview");
     const root = document.getElementById("root");
-    if (!overview || !root) return;
-
-    const shell = root.querySelector(".bs-shell");
-    if (!shell) return;
+    const shell = root?.querySelector(".bs-shell");
+    if (!overview || !root || !shell) return;
 
     const topBar = Array.from(shell.children).find((el) => {
       const text = (el.textContent || "").trim();
@@ -16,9 +14,9 @@
     });
     if (!topBar) return;
 
-    if (!topBar.dataset.bsMovedAboveOverview) {
-      topBar.dataset.bsMovedAboveOverview = "1";
-      overview.parentNode.insertBefore(topBar, overview);
+    // Keep the React-owned header inside #root so its theme button keeps working.
+    if (overview.parentElement !== shell || topBar.nextElementSibling !== overview) {
+      shell.insertBefore(overview, topBar.nextSibling);
     }
   }
 
@@ -42,31 +40,18 @@
         card.style.boxShadow = "0 3px 14px rgba(31,41,51,.055)";
         card.style.padding = "14px";
         card.style.display = "block";
-        card.style.gridTemplateColumns = "";
-        card.style.alignItems = "";
-        card.style.columnGap = "";
         card.style.borderBottom = "1px solid var(--border)";
 
-        const label = card.querySelector(".bs-summary-label");
         const value = card.querySelector(".bs-summary-value");
         const sub = card.querySelector(".bs-summary-sub");
-        if (label) {
-          label.style.gridColumn = "";
-        }
         if (value) {
-          value.style.gridColumn = "";
-          value.style.gridRow = "";
           value.style.marginTop = "6px";
           value.style.textAlign = "left";
         }
-        if (sub) {
-          sub.style.gridColumn = "";
-          sub.style.marginTop = "4px";
-        }
+        if (sub) sub.style.marginTop = "4px";
       });
     }
 
-    // Hide the older dashboard block if it repeats both Money In and Money Out.
     const root = document.getElementById("root");
     if (!root) return;
     const candidates = Array.from(root.querySelectorAll("div"))
@@ -82,7 +67,7 @@
       return (el.textContent || "").length < 1200;
     });
 
-    if (duplicate && !duplicate.dataset.bsFinancialSummaryHidden) {
+    if (duplicate) {
       duplicate.dataset.bsFinancialSummaryHidden = "1";
       duplicate.style.display = "none";
     }
@@ -108,14 +93,13 @@
     queued = true;
     requestAnimationFrame(() => {
       queued = false;
-      moveHeaderAboveOverview();
+      placeOverviewBelowHeader();
       consolidatePreviewSummary();
       applyResponsiveLayout();
     });
   };
 
-  const observer = new MutationObserver(refresh);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  new MutationObserver(refresh).observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener("resize", refresh);
   refresh();
 })();
