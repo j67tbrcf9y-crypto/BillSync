@@ -25,7 +25,7 @@
     html = html.slice(0, start) + '  function Icon' + html.slice(end + endMarker.length);
 
     const reactMarker = '<script src="https://unpkg.com/react@18/umd/react.production.min.js"></' + 'script>';
-    const injection = reactMarker + '\n<script src="./indexeddb-storage.js"></' + 'script>\n<script src="./auto-history.js"></' + 'script>\n<script src="./ui-redesign.js"></' + 'script>';
+    const injection = reactMarker + '\n<script src="./indexeddb-storage.js"></' + 'script>\n<script src="./auto-history.js"></' + 'script>\n<script src="./ui-redesign.js"></' + 'script>\n<script src="./ui-theme-sync.js"></' + 'script>';
     if (!html.includes(reactMarker)) throw new Error('Could not locate the React loader.');
     html = html.replace(reactMarker, injection);
 
