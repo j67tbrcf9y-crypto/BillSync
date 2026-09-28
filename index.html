@@ -9,13 +9,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="BillSync" />
-<title>BillSync</title>
+<title>BillSync UI Preview</title>
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="IMG_3235.png" />
 <link rel="apple-touch-icon" href="IMG_3235.png" />
 </head>
 <body>
-<div id="root" style="font-family:-apple-system,sans-serif;padding:24px">Loading BillSync…</div>
+<div id="root" style="font-family:-apple-system,sans-serif;padding:24px">Loading BillSync UI Preview…</div>
 <script>
 (async () => {
   try {
@@ -32,7 +32,7 @@
     html = html.slice(0, start) + '  function Icon' + html.slice(end + endMarker.length);
 
     const reactMarker = '<script src="https://unpkg.com/react@18/umd/react.production.min.js"></' + 'script>';
-    const injection = reactMarker + '\n<script src="./indexeddb-storage.js"></' + 'script>\n<script src="./auto-history.js"></' + 'script>';
+    const injection = reactMarker + '\n<script src="./indexeddb-storage.js"></' + 'script>\n<script src="./auto-history.js"></' + 'script>\n<script src="./ui-redesign.js"></' + 'script>';
     if (!html.includes(reactMarker)) throw new Error('Could not locate the React loader.');
     html = html.replace(reactMarker, injection);
 
@@ -43,7 +43,7 @@
     document.write(html);
     document.close();
   } catch (error) {
-    document.getElementById('root').innerHTML = '<strong>BillSync could not start.</strong><pre style="white-space:pre-wrap">' +
+    document.getElementById('root').innerHTML = '<strong>BillSync UI Preview could not start.</strong><pre style="white-space:pre-wrap">' +
       String(error && (error.stack || error.message) || error).replace(/</g, '&lt;') + '</pre>';
   }
 })();
