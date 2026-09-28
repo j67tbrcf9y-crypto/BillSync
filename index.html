@@ -36,7 +36,7 @@
     if (!html.includes(reactMarker)) throw new Error('Could not locate the React loader.');
     html = html.replace(reactMarker, injection);
 
-    const removeManualMonthControl = `\n<script>\n(() => {\n  function removeNewMonthButtons() {\n    document.querySelectorAll('button').forEach((button) => {\n      if ((button.textContent || '').trim() === 'New Month') button.remove();\n    });\n  }\n  removeNewMonthButtons();\n  new MutationObserver(removeNewMonthButtons).observe(document.documentElement, { childList: true, subtree: true });\n})();\n</` + `script>\n`;
+    const removeManualMonthControl = `\n<script>\n(() => {\n  function removeNewMonthButtons() {\n    document.querySelectorAll('button').forEach((button) => {\n      const text = (button.textContent || '').trim().toLowerCase();\n      const title = (button.getAttribute('title') || '').trim().toLowerCase();\n      if (text === 'new month' || title === 'start a new month') button.remove();\n    });\n  }\n  removeNewMonthButtons();\n  new MutationObserver(removeNewMonthButtons).observe(document.documentElement, { childList: true, subtree: true });\n})();\n</` + `script>\n`;
     html = html.replace('</body>', removeManualMonthControl + '</body>');
 
     document.open();
