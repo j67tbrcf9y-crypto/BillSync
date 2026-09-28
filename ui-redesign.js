@@ -1,12 +1,17 @@
 /* BillSync UI redesign preview
  * Visual-only enhancement layer for the billsync-ui-redesign branch.
- * It does not change the underlying ledger schema or financial data.
+ * Does not change the ledger schema or financial data.
  */
 (() => {
   "use strict";
 
   const STORAGE_KEY = "ledger-data-v1";
   const STATUS_WORDS = new Set(["due", "pending", "paid", "n/a", "cleared"]);
+  const THEME_VARS = [
+    "--bg", "--card", "--nav-bg", "--input-bg", "--border", "--border-dashed",
+    "--ink", "--ink-soft", "--muted", "--accent", "--on-accent", "--pending",
+    "--due", "--due-ink", "--danger", "--disabled"
+  ];
 
   const css = `
     :root {
@@ -18,9 +23,9 @@
     html { scroll-behavior:smooth; }
     body {
       margin:0 !important;
-      background:
-        radial-gradient(circle at 50% -80px, color-mix(in srgb, var(--accent) 9%, transparent), transparent 310px),
-        var(--bg) !important;
+      background:var(--bg, #EDEFEA) !important;
+      color:var(--ink, #1F2933);
+      transition:background .15s ease, color .15s ease;
     }
     #root { max-width:620px !important; margin:0 auto !important; padding-bottom:104px !important; }
     button, input, select { -webkit-tap-highlight-color:transparent; }
@@ -33,12 +38,13 @@
       color:var(--muted); text-align:center;
     }
     .bs-overview {
-      max-width:620px; margin:0 auto; padding:14px 16px 4px; box-sizing:border-box;
+      max-width:620px; margin:0 auto; padding:12px 16px 4px; box-sizing:border-box;
+      color:var(--ink);
     }
-    .bs-month-row { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin-bottom:14px; }
-    .bs-eyebrow { font:600 10px/1.2 'IBM Plex Mono', monospace; color:var(--muted); text-transform:uppercase; letter-spacing:.85px; margin-bottom:5px; }
-    .bs-month { font-family:'Fraunces',serif; font-size:25px; font-weight:650; color:var(--ink); line-height:1.05; }
-    .bs-count { font-size:12px; color:var(--ink-soft); white-space:nowrap; }
+    .bs-overview-title {
+      font:650 10px/1.2 'IBM Plex Mono', monospace; color:var(--muted);
+      text-transform:uppercase; letter-spacing:.75px; margin:0 0 9px 2px;
+    }
     .bs-summary-grid { display:grid; grid-template-columns:1.35fr 1fr 1fr; gap:10px; }
     .bs-summary-card {
       background:var(--card); border:1px solid var(--border); border-radius:var(--bs-radius-md);
@@ -76,6 +82,7 @@
       border-top:1px solid color-mix(in srgb, var(--border) 78%, transparent) !important;
       box-shadow:0 -10px 30px rgba(31,41,51,.08) !important;
       backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+      background:color-mix(in srgb, var(--nav-bg) 88%, transparent) !important;
     }
     .bs-bottom-nav button { min-height:48px !important; border-radius:13px !important; }
 
@@ -105,7 +112,6 @@
       .bs-summary-grid { grid-template-columns:1fr 1fr; }
       .bs-summary-card.primary { grid-column:1 / -1; }
       .bs-summary-value { font-size:18px; }
-      .bs-month { font-size:23px; }
     }
   `;
 
@@ -127,6 +133,31 @@
     return value;
   }
 
+  function findThemeSource() {
+    const root = document.getElementById("root");
+    if (!root) return null;
+    const candidates = [root, ...root.querySelectorAll("*")];
+    for (const node of candidates) {
+      const bg = getComputedStyle(node).getPropertyValue("--bg").trim();
+      if (bg) return node;
+    }
+    return null;
+  }
+
+  function syncTheme() {
+    const source = findThemeSource();
+    if (!source) return;
+    const computed = getComputedStyle(source);
+    THEME_VARS.forEach((name) => {
+      const value = computed.getPropertyValue(name).trim();
+      if (value) document.documentElement.style.setProperty(name, value);
+    });
+    const bg = computed.getPropertyValue("--bg").trim();
+    const ink = computed.getPropertyValue("--ink").trim();
+    if (bg) document.body.style.background = bg;
+    if (ink) document.body.style.color = ink;
+  }
+
   function createOverview() {
     if (document.getElementById("bs-ui-overview")) return;
     const root = document.getElementById("root");
@@ -140,10 +171,7 @@
     box.id = "bs-ui-overview";
     box.className = "bs-overview";
     box.innerHTML = `
-      <div class="bs-month-row">
-        <div><div class="bs-eyebrow">Monthly overview</div><div class="bs-month" id="bs-month-name"></div></div>
-        <div class="bs-count" id="bs-paid-count">Loading…</div>
-      </div>
+      <div class="bs-overview-title">Overview</div>
       <div class="bs-summary-grid">
         <div class="bs-summary-card primary"><div class="bs-summary-label">Available</div><div class="bs-summary-value" id="bs-available">—</div><div class="bs-summary-sub">planned income minus bills</div></div>
         <div class="bs-summary-card"><div class="bs-summary-label">Money In</div><div class="bs-summary-value" id="bs-income">—</div><div class="bs-summary-sub">monthly expected</div></div>
@@ -151,16 +179,16 @@
       </div>
       <div class="bs-progress-wrap">
         <div class="bs-progress-track"><div class="bs-progress-fill" id="bs-progress-fill"></div></div>
-        <div class="bs-progress-label"><span>Monthly bill progress</span><span id="bs-progress-text">0%</span></div>
+        <div class="bs-progress-label"><span id="bs-paid-count">Loading…</span><span id="bs-progress-text">0%</span></div>
       </div>`;
 
     root.parentNode.insertBefore(banner, root);
     root.parentNode.insertBefore(box, root);
-    document.getElementById("bs-month-name").textContent = new Date().toLocaleString(void 0, { month: "long", year: "numeric" });
   }
 
   async function updateOverview() {
     createOverview();
+    syncTheme();
     if (!window.storage?.get) return;
     try {
       const res = await window.storage.get(STORAGE_KEY);
@@ -190,9 +218,7 @@
     document.querySelectorAll("button").forEach((button) => {
       const text = (button.textContent || "").trim().replace(/\s+/g, " ");
       const lower = text.toLowerCase();
-      if (STATUS_WORDS.has(lower)) {
-        button.classList.add("bs-status-pill", `bs-status-${lower.replace("/", "")}`);
-      }
+      if (STATUS_WORDS.has(lower)) button.classList.add("bs-status-pill", `bs-status-${lower.replace("/", "")}`);
       if (/^add (money out|money in|goal|savings)/i.test(text)) button.classList.add("bs-add-action");
     });
   }
@@ -200,9 +226,7 @@
   function decorateSections() {
     document.querySelectorAll("div").forEach((el) => {
       const text = (el.textContent || "").trim();
-      if (["Money Out", "Money In", "Savings Goals", "History"].includes(text) && el.children.length === 0) {
-        el.classList.add("bs-section-heading");
-      }
+      if (["Money Out", "Money In", "Savings Goals", "History"].includes(text) && el.children.length === 0) el.classList.add("bs-section-heading");
     });
 
     document.querySelectorAll("div").forEach((el) => {
@@ -273,6 +297,7 @@
     requestAnimationFrame(() => {
       queued = false;
       createOverview();
+      syncTheme();
       decorateButtons();
       decorateSections();
       groupBills();
@@ -285,6 +310,12 @@
     updateOverview();
     refreshVisuals();
     new MutationObserver(refreshVisuals).observe(document.documentElement, { childList: true, subtree: true });
+
+    // Keep the redesign in sync with the app's existing theme selector.
+    document.addEventListener("click", () => {
+      setTimeout(syncTheme, 0);
+      setTimeout(syncTheme, 80);
+    }, true);
 
     if (window.storage?.set && !window.storage.__uiRedesignWrapped) {
       const base = window.storage;
