@@ -1,11 +1,14 @@
 // BillSync service worker — caches the app shell so it keeps working
 // with no signal after the first successful load. Bump CACHE_NAME when
 // you deploy an update; that forces everyone's cache to refresh.
-const CACHE_NAME = "billsync-v11";
+const CACHE_NAME = "billsync-v12";
 
 const APP_SHELL = [
   "./",
   "./index.html",
+  "./app-shell.html",
+  "./indexeddb-storage.js",
+  "./auto-history.js",
   "./manifest.json",
   "./IMG_3235.png",
   "./IMG_3236.png",
@@ -19,8 +22,7 @@ self.addEventListener("install", (event) => {
       Promise.all(
         APP_SHELL.map((url) =>
           cache.add(new Request(url, { mode: url.startsWith("http") ? "no-cors" : "same-origin" })).catch(() => {
-            // A single failed precache (e.g. offline during install) shouldn't
-            // block the rest of the shell from being cached.
+            // A single failed precache should not block the rest of the shell.
           })
         )
       )
@@ -36,11 +38,29 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Cache-first for the app shell and its dependencies; network-first
-// fallback for anything else, so new content is picked up when online
-// but the app still opens when it isn't.
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  const requestUrl = new URL(event.request.url);
+  const isNavigation = event.request.mode === "navigate";
+  const isBootstrap = requestUrl.pathname.endsWith("/index.html") || requestUrl.pathname.endsWith("/BillSync/");
+
+  // Prefer the network for navigations/bootstrap so releases are picked up quickly,
+  // but fall back to cache when offline.
+  if (isNavigation || isBootstrap) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match("./index.html")))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
