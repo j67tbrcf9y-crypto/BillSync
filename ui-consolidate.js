@@ -4,6 +4,23 @@
 
   const DESKTOP_BREAKPOINT = 768;
 
+  function placeOverviewBelowHeader() {
+    const root = document.getElementById("root");
+    const shell = root?.querySelector(".bs-shell");
+    const overview = document.getElementById("bs-ui-overview");
+    if (!shell || !overview) return;
+
+    const topBar = Array.from(shell.children).find((el) => {
+      const text = (el.textContent || "").trim();
+      return text.includes("BillSync") && el.querySelector("button[aria-label='Change theme']");
+    });
+    if (!topBar) return;
+
+    if (overview.parentElement !== shell || topBar.nextElementSibling !== overview) {
+      shell.insertBefore(overview, topBar.nextSibling);
+    }
+  }
+
   function styleCard(card, index, desktop) {
     card.style.background = index === 0
       ? "linear-gradient(145deg, color-mix(in srgb, var(--accent) 11%, var(--card)), var(--card))"
@@ -97,6 +114,7 @@
     queued = true;
     requestAnimationFrame(() => {
       queued = false;
+      placeOverviewBelowHeader();
       applySummaryLayout();
       hideLegacySummary();
     });
