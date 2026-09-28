@@ -1,5 +1,5 @@
 // BillSync service worker — caches the complete app shell for offline use.
-const CACHE_NAME = "billsync-v13-cleanup";
+const CACHE_NAME = "billsync-v14-statistics";
 
 const APP_SHELL = [
   "./",
