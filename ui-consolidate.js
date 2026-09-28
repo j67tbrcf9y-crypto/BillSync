@@ -1,14 +1,14 @@
-/* Consolidate duplicated financial summary UI in BillSync. */
+/* BillSync responsive summary layout. */
 (() => {
   "use strict";
 
   const DESKTOP_BREAKPOINT = 768;
 
   function placeOverviewBelowHeader() {
-    const overview = document.getElementById("bs-ui-overview");
     const root = document.getElementById("root");
     const shell = root?.querySelector(".bs-shell");
-    if (!overview || !root || !shell) return;
+    const overview = document.getElementById("bs-ui-overview");
+    if (!shell || !overview) return;
 
     const topBar = Array.from(shell.children).find((el) => {
       const text = (el.textContent || "").trim();
@@ -16,7 +16,6 @@
     });
     if (!topBar) return;
 
-    // Keep the React-owned header inside #root so its theme button continues to work.
     if (overview.parentElement !== shell || topBar.nextElementSibling !== overview) {
       shell.insertBefore(overview, topBar.nextSibling);
     }
@@ -44,11 +43,7 @@
       card.style.gridTemplateRows = "";
       card.style.columnGap = "";
       card.style.alignItems = "";
-
-      if (label) {
-        label.style.gridColumn = "";
-        label.style.gridRow = "";
-      }
+      if (label) { label.style.gridColumn = ""; label.style.gridRow = ""; }
       if (value) {
         value.style.gridColumn = "";
         value.style.gridRow = "";
@@ -56,96 +51,77 @@
         value.style.textAlign = "left";
         value.style.whiteSpace = "nowrap";
         value.style.overflow = "visible";
-        value.style.textOverflow = "clip";
-        value.style.maxWidth = "none";
         value.style.fontSize = "19px";
       }
-      if (sub) {
-        sub.style.gridColumn = "";
-        sub.style.gridRow = "";
-        sub.style.marginTop = "4px";
-      }
-    } else {
-      card.style.display = "grid";
-      card.style.gridTemplateColumns = "minmax(0, 1fr) auto";
-      card.style.gridTemplateRows = "auto auto";
-      card.style.columnGap = "16px";
-      card.style.alignItems = "center";
+      if (sub) { sub.style.gridColumn = ""; sub.style.gridRow = ""; sub.style.marginTop = "4px"; }
+      return;
+    }
 
-      if (label) {
-        label.style.gridColumn = "1";
-        label.style.gridRow = "1";
-      }
-      if (sub) {
-        sub.style.gridColumn = "1";
-        sub.style.gridRow = "2";
-        sub.style.marginTop = "3px";
-      }
-      if (value) {
-        value.style.gridColumn = "2";
-        value.style.gridRow = "1 / span 2";
-        value.style.marginTop = "0";
-        value.style.textAlign = "right";
-        value.style.whiteSpace = "nowrap";
-        value.style.overflow = "visible";
-        value.style.textOverflow = "clip";
-        value.style.maxWidth = "none";
-        value.style.fontSize = "20px";
-      }
+    card.style.display = "grid";
+    card.style.gridTemplateColumns = "minmax(0, 1fr) auto";
+    card.style.gridTemplateRows = "auto auto";
+    card.style.columnGap = "16px";
+    card.style.alignItems = "center";
+    if (label) { label.style.gridColumn = "1"; label.style.gridRow = "1"; }
+    if (sub) { sub.style.gridColumn = "1"; sub.style.gridRow = "2"; sub.style.marginTop = "3px"; }
+    if (value) {
+      value.style.gridColumn = "2";
+      value.style.gridRow = "1 / span 2";
+      value.style.marginTop = "0";
+      value.style.textAlign = "right";
+      value.style.whiteSpace = "nowrap";
+      value.style.overflow = "visible";
+      value.style.fontSize = "20px";
     }
   }
 
-  function consolidateSummary() {
+  function applySummaryLayout() {
     const grid = document.querySelector("#bs-ui-overview .bs-summary-grid");
-    if (grid) {
-      const desktop = window.innerWidth >= DESKTOP_BREAKPOINT;
-      grid.dataset.bsConsolidated = "1";
-      grid.style.display = "grid";
-      grid.style.gridTemplateColumns = desktop ? "1.35fr 1fr 1fr" : "1fr";
-      grid.style.gap = "10px";
-      grid.style.background = "transparent";
-      grid.style.border = "0";
-      grid.style.borderRadius = "0";
-      grid.style.boxShadow = "none";
-      grid.style.overflow = "visible";
+    if (!grid) return;
 
-      Array.from(grid.children).forEach((card, index) => styleCard(card, index, desktop));
-    }
+    const desktop = window.innerWidth >= DESKTOP_BREAKPOINT;
+    grid.style.display = "grid";
+    grid.style.gridTemplateColumns = desktop ? "1.35fr 1fr 1fr" : "1fr";
+    grid.style.gap = "10px";
+    grid.style.background = "transparent";
+    grid.style.border = "0";
+    grid.style.borderRadius = "0";
+    grid.style.boxShadow = "none";
+    grid.style.overflow = "visible";
+    Array.from(grid.children).forEach((card, index) => styleCard(card, index, desktop));
+  }
 
-    // Hide the older dashboard block if it repeats both Money In and Money Out.
+  function hideLegacySummary() {
     const root = document.getElementById("root");
     if (!root) return;
-    const candidates = Array.from(root.querySelectorAll("div"))
+
+    const duplicate = Array.from(root.querySelectorAll("div"))
       .filter((el) => {
+        if (el.closest("#bs-ui-overview")) return false;
         const text = (el.textContent || "").replace(/\s+/g, " ").trim();
-        return text.includes("Money In") && text.includes("Money Out") && text.includes("$");
+        return text.includes("Money In") && text.includes("Money Out") && text.includes("$")
+          && el.querySelectorAll("button").length <= 3
+          && text.length < 1200;
       })
-      .sort((a, b) => (a.textContent || "").length - (b.textContent || "").length);
+      .sort((a, b) => (a.textContent || "").length - (b.textContent || "").length)[0];
 
-    const duplicate = candidates.find((el) => {
-      if (el.closest("#bs-ui-overview")) return false;
-      if (el.querySelectorAll("button").length > 3) return false;
-      return (el.textContent || "").length < 1200;
-    });
-
-    if (duplicate) {
-      duplicate.dataset.bsFinancialSummaryHidden = "1";
-      duplicate.style.display = "none";
-    }
+    if (duplicate) duplicate.style.display = "none";
   }
 
   let queued = false;
-  const refresh = () => {
+  function refresh() {
     if (queued) return;
     queued = true;
     requestAnimationFrame(() => {
       queued = false;
       placeOverviewBelowHeader();
-      consolidateSummary();
+      applySummaryLayout();
+      hideLegacySummary();
     });
-  };
+  }
 
-  new MutationObserver(refresh).observe(document.documentElement, { childList: true, subtree: true });
-  window.addEventListener("resize", refresh);
+  const root = document.getElementById("root");
+  if (root) new MutationObserver(refresh).observe(root, { childList: true, subtree: true });
+  window.addEventListener("resize", refresh, { passive: true });
   refresh();
 })();

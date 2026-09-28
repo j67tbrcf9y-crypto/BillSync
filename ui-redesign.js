@@ -1,17 +1,11 @@
-/* BillSync UI redesign preview
- * Visual-only enhancement layer for the billsync-ui-redesign branch.
- * Does not change the ledger schema or financial data.
+/* BillSync UI enhancement layer.
+ * Visual-only behavior; does not change the ledger schema or financial data.
  */
 (() => {
   "use strict";
 
   const STORAGE_KEY = "ledger-data-v1";
   const STATUS_WORDS = new Set(["due", "pending", "paid", "n/a", "cleared"]);
-  const THEME_VARS = [
-    "--bg", "--card", "--nav-bg", "--input-bg", "--border", "--border-dashed",
-    "--ink", "--ink-soft", "--muted", "--accent", "--on-accent", "--pending",
-    "--due", "--due-ink", "--danger", "--disabled"
-  ];
 
   const css = `
     :root {
@@ -32,11 +26,6 @@
     button { cursor:pointer; }
     input, select { min-height:46px; border-radius:12px !important; }
 
-    .bs-preview-banner {
-      max-width:620px; margin:0 auto; padding:10px 16px 0; box-sizing:border-box;
-      font:600 10px/1.2 'IBM Plex Mono', monospace; text-transform:uppercase; letter-spacing:.7px;
-      color:var(--muted); text-align:center;
-    }
     .bs-overview {
       max-width:620px; margin:0 auto; padding:12px 16px 4px; box-sizing:border-box;
       color:var(--ink);
@@ -45,7 +34,7 @@
       font:650 10px/1.2 'IBM Plex Mono', monospace; color:var(--muted);
       text-transform:uppercase; letter-spacing:.75px; margin:0 0 9px 2px;
     }
-    .bs-summary-grid { display:grid; grid-template-columns:1.35fr 1fr 1fr; gap:10px; }
+    .bs-summary-grid { display:grid; gap:10px; }
     .bs-summary-card {
       background:var(--card); border:1px solid var(--border); border-radius:var(--bs-radius-md);
       padding:14px; box-shadow:var(--bs-soft-shadow); min-width:0;
@@ -55,7 +44,7 @@
       border-color:color-mix(in srgb, var(--accent) 28%, var(--border));
     }
     .bs-summary-label { font:600 9.5px/1.3 'IBM Plex Mono', monospace; text-transform:uppercase; letter-spacing:.55px; color:var(--muted); }
-    .bs-summary-value { margin-top:6px; font-size:19px; font-weight:720; color:var(--ink); letter-spacing:-.4px; overflow:hidden; text-overflow:ellipsis; }
+    .bs-summary-value { margin-top:6px; font-size:19px; font-weight:720; color:var(--ink); letter-spacing:-.4px; }
     .bs-summary-sub { margin-top:4px; font-size:10.5px; color:var(--ink-soft); }
     .bs-progress-wrap { margin-top:12px; }
     .bs-progress-track { height:7px; border-radius:999px; background:color-mix(in srgb, var(--border) 70%, transparent); overflow:hidden; }
@@ -107,22 +96,21 @@
     .bs-goal-card, .bs-history-card { border-radius:var(--bs-radius-md) !important; box-shadow:var(--bs-soft-shadow) !important; }
     .bs-modal-sheet { border-radius:22px 22px 0 0 !important; }
     .bs-modal-sheet button { min-height:44px; }
-
-    @media (max-width:430px) {
-      .bs-summary-grid { grid-template-columns:1fr 1fr; }
-      .bs-summary-card.primary { grid-column:1 / -1; }
-      .bs-summary-value { font-size:18px; }
-    }
   `;
 
-  const style = document.createElement("style");
-  style.id = "billsync-ui-redesign-style";
-  style.textContent = css;
-  document.head.appendChild(style);
+  if (!document.getElementById("billsync-ui-redesign-style")) {
+    const style = document.createElement("style");
+    style.id = "billsync-ui-redesign-style";
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
 
   function money(value) {
     const n = Number(value) || 0;
-    return (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString(void 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString(void 0, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   }
 
   function monthlyAmount(item) {
@@ -133,39 +121,21 @@
     return value;
   }
 
-  function findThemeSource() {
-    const root = document.getElementById("root");
-    if (!root) return null;
-    const candidates = [root, ...root.querySelectorAll("*")];
-    for (const node of candidates) {
-      const bg = getComputedStyle(node).getPropertyValue("--bg").trim();
-      if (bg) return node;
-    }
-    return null;
+  function getShell() {
+    return document.querySelector("#root .bs-shell");
   }
 
-  function syncTheme() {
-    const source = findThemeSource();
-    if (!source) return;
-    const computed = getComputedStyle(source);
-    THEME_VARS.forEach((name) => {
-      const value = computed.getPropertyValue(name).trim();
-      if (value) document.documentElement.style.setProperty(name, value);
-    });
-    const bg = computed.getPropertyValue("--bg").trim();
-    const ink = computed.getPropertyValue("--ink").trim();
-    if (bg) document.body.style.background = bg;
-    if (ink) document.body.style.color = ink;
+  function findTopBar(shell) {
+    return Array.from(shell?.children || []).find((el) => {
+      const text = (el.textContent || "").trim();
+      return text.includes("BillSync") && el.querySelector("button[aria-label='Change theme']");
+    }) || null;
   }
 
   function createOverview() {
     if (document.getElementById("bs-ui-overview")) return;
-    const root = document.getElementById("root");
-    if (!root || !root.parentNode) return;
-
-    const banner = document.createElement("div");
-    banner.className = "bs-preview-banner";
-    banner.textContent = "UI redesign preview";
+    const shell = getShell();
+    if (!shell) return;
 
     const box = document.createElement("section");
     box.id = "bs-ui-overview";
@@ -182,30 +152,33 @@
         <div class="bs-progress-label"><span id="bs-paid-count">Loading…</span><span id="bs-progress-text">0%</span></div>
       </div>`;
 
-    root.parentNode.insertBefore(banner, root);
-    root.parentNode.insertBefore(box, root);
+    const topBar = findTopBar(shell);
+    if (topBar) shell.insertBefore(box, topBar.nextSibling);
+    else shell.insertBefore(box, shell.firstChild);
   }
 
   async function updateOverview() {
     createOverview();
-    syncTheme();
     if (!window.storage?.get) return;
     try {
       const res = await window.storage.get(STORAGE_KEY);
       const data = JSON.parse(res.value || "{}");
       const bills = Array.isArray(data.bills) ? data.bills : [];
       const income = Array.isArray(data.income) ? data.income : [];
-      const billTotal = bills.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-      const incomeTotal = income.reduce((s, i) => s + monthlyAmount(i), 0);
-      const paidCount = bills.filter((b) => b.status === "paid").length;
+      const billTotal = bills.reduce((sum, bill) => sum + (Number(bill.amount) || 0), 0);
+      const incomeTotal = income.reduce((sum, item) => sum + monthlyAmount(item), 0);
+      const paidCount = bills.filter((bill) => bill.status === "paid").length;
       const pct = bills.length ? Math.round(paidCount / bills.length * 100) : 0;
 
-      const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
-      set("bs-available", money(incomeTotal - billTotal));
-      set("bs-income", money(incomeTotal));
-      set("bs-bills", money(billTotal));
-      set("bs-paid-count", `${paidCount} of ${bills.length} bills paid`);
-      set("bs-progress-text", `${pct}%`);
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      };
+      setText("bs-available", money(incomeTotal - billTotal));
+      setText("bs-income", money(incomeTotal));
+      setText("bs-bills", money(billTotal));
+      setText("bs-paid-count", `${paidCount} of ${bills.length} bills paid`);
+      setText("bs-progress-text", `${pct}%`);
       const fill = document.getElementById("bs-progress-fill");
       if (fill) fill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
     } catch (_) {
@@ -214,8 +187,8 @@
     }
   }
 
-  function decorateButtons() {
-    document.querySelectorAll("button").forEach((button) => {
+  function decorateButtons(root) {
+    root.querySelectorAll("button").forEach((button) => {
       const text = (button.textContent || "").trim().replace(/\s+/g, " ");
       const lower = text.toLowerCase();
       if (STATUS_WORDS.has(lower)) button.classList.add("bs-status-pill", `bs-status-${lower.replace("/", "")}`);
@@ -223,13 +196,12 @@
     });
   }
 
-  function decorateSections() {
-    document.querySelectorAll("div").forEach((el) => {
+  function decorateSections(root) {
+    root.querySelectorAll("div").forEach((el) => {
       const text = (el.textContent || "").trim();
-      if (["Money Out", "Money In", "Savings Goals", "History"].includes(text) && el.children.length === 0) el.classList.add("bs-section-heading");
-    });
-
-    document.querySelectorAll("div").forEach((el) => {
+      if (["Money Out", "Money In", "Savings Goals", "History"].includes(text) && el.children.length === 0) {
+        el.classList.add("bs-section-heading");
+      }
       if (el.style?.position === "fixed" && (el.style?.bottom === "0px" || el.style?.bottom === "0" || el.style?.inset)) {
         if (el.querySelectorAll("button").length >= 3) el.classList.add("bs-bottom-nav");
       }
@@ -237,7 +209,7 @@
   }
 
   function addUrgencyBadge(row, bucket, label) {
-    row.querySelectorAll(".bs-urgency-badge").forEach((n) => n.remove());
+    row.querySelectorAll(".bs-urgency-badge").forEach((node) => node.remove());
     const name = row.querySelector("div[style*='font-weight: 600']") || row.querySelector("div");
     if (!name) return;
     const badge = document.createElement("span");
@@ -246,12 +218,16 @@
     name.appendChild(badge);
   }
 
-  function groupBills() {
-    const title = Array.from(document.querySelectorAll("div")).find((el) => el.children.length === 0 && (el.textContent || "").trim() === "Money Out");
+  function groupBills(root) {
+    const title = Array.from(root.querySelectorAll("div")).find((el) =>
+      el.children.length === 0 && (el.textContent || "").trim() === "Money Out"
+    );
     if (!title) return;
     const section = title.parentElement?.parentElement;
     if (!section) return;
-    const list = Array.from(section.children).find((el) => el.style?.display === "flex" && el.style?.flexDirection === "column" && el.style?.gap === "8px");
+    const list = Array.from(section.children).find((el) =>
+      el.style?.display === "flex" && el.style?.flexDirection === "column" && el.style?.gap === "8px"
+    );
     if (!list) return;
 
     const today = new Date().getDate();
@@ -282,11 +258,11 @@
     });
   }
 
-  function decorateCards() {
-    document.querySelectorAll("div").forEach((el) => {
-      const txt = (el.textContent || "").trim();
-      if (/saved|goal|target/i.test(txt) && el.style?.border === "1px solid var(--border)") el.classList.add("bs-goal-card");
-      if (/\b20\d{2}\b/.test(txt) && el.style?.border === "1px solid var(--border)") el.classList.add("bs-history-card");
+  function decorateCards(root) {
+    root.querySelectorAll("div").forEach((el) => {
+      const text = (el.textContent || "").trim();
+      if (/saved|goal|target/i.test(text) && el.style?.border === "1px solid var(--border)") el.classList.add("bs-goal-card");
+      if (/\b20\d{2}\b/.test(text) && el.style?.border === "1px solid var(--border)") el.classList.add("bs-history-card");
     });
   }
 
@@ -297,24 +273,22 @@
     requestAnimationFrame(() => {
       queued = false;
       createOverview();
-      syncTheme();
-      decorateButtons();
-      decorateSections();
-      groupBills();
-      decorateCards();
+      const root = document.getElementById("root");
+      if (!root) return;
+      decorateButtons(root);
+      decorateSections(root);
+      groupBills(root);
+      decorateCards(root);
     });
   }
 
-  const start = () => {
+  function start() {
     createOverview();
     updateOverview();
     refreshVisuals();
-    new MutationObserver(refreshVisuals).observe(document.documentElement, { childList: true, subtree: true });
 
-    document.addEventListener("click", () => {
-      setTimeout(syncTheme, 0);
-      setTimeout(syncTheme, 80);
-    }, true);
+    const root = document.getElementById("root");
+    if (root) new MutationObserver(refreshVisuals).observe(root, { childList: true, subtree: true });
 
     if (window.storage?.set && !window.storage.__uiRedesignWrapped) {
       const base = window.storage;
@@ -328,7 +302,7 @@
         }
       };
     }
-  };
+  }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
   else start();
