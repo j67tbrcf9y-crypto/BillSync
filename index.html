@@ -19,7 +19,7 @@
 <script>
 (async () => {
   try {
-    const response = await fetch('./app-shell.html?v=20260927-ui1', { cache: 'no-store' });
+    const response = await fetch('./app-shell.html?v=20260927-ui2', { cache: 'no-store' });
     if (!response.ok) throw new Error(`Unable to load BillSync (${response.status})`);
     let html = await response.text();
 
@@ -33,12 +33,12 @@
 
     const reactMarker = '<script src="https://unpkg.com/react@18/umd/react.production.min.js"></' + 'script>';
     const injection = reactMarker +
-      '\n<script src="./indexeddb-storage.js?v=20260927-ui1"></' + 'script>' +
-      '\n<script src="./auto-history.js?v=20260927-ui1"></' + 'script>' +
-      '\n<script src="./ui-redesign.js?v=20260927-ui1"></' + 'script>' +
-      '\n<script src="./ui-theme-sync.js?v=20260927-ui1"></' + 'script>' +
-      '\n<script src="./ui-consolidate.js?v=20260927-ui1"></' + 'script>' +
-      '\n<script src="./ui-statistics.js?v=20260927-ui1"></' + 'script>';
+      '\n<script src="./indexeddb-storage.js?v=20260927-ui2"></' + 'script>' +
+      '\n<script src="./auto-history.js?v=20260927-ui2"></' + 'script>' +
+      '\n<script src="./ui-redesign.js?v=20260927-ui2"></' + 'script>' +
+      '\n<script src="./ui-theme-sync.js?v=20260927-ui2"></' + 'script>' +
+      '\n<script src="./ui-consolidate.js?v=20260927-ui2"></' + 'script>' +
+      '\n<script src="./ui-statistics.js?v=20260927-ui2"></' + 'script>';
     if (!html.includes(reactMarker)) throw new Error('Could not locate the React loader.');
     html = html.replace(reactMarker, injection);
 
